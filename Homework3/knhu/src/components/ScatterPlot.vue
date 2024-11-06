@@ -91,6 +91,8 @@ export default {
 
       const width = this.width - this.margin.left - this.margin.right;
       const height = this.height - this.margin.top - this.margin.bottom;
+      const gradientBarHeight = 10;
+      const gradientPadding = 20; // Padding between x-axis label and gradient bar
 
       const isDefaultView = this.selectedMakes.includes("show-all");
       const filteredData = isDefaultView 
@@ -116,7 +118,7 @@ export default {
       // X-axis title
       xAxis.append("text")
         .attr("x", width / 2)
-        .attr("y", 50)
+        .attr("y", gradientPadding + gradientBarHeight + 30) // Adjusted for padding
         .attr("fill", "black")
         .style("font-size", "14px")
         .text("Condition Rating Bins");
@@ -179,9 +181,49 @@ export default {
 
       // Animate the X-axis when data updates
       xAxis.transition().duration(1000).call(d3.axisBottom(x).ticks(10));
-      
+
       // Animate the Y-axis when data updates
       yAxis.transition().duration(1000).call(d3.axisLeft(y));
+
+      // Gradient color bar for condition scale
+      const gradient = chart.append("defs")
+        .append("linearGradient")
+        .attr("id", "condition-gradient")
+        .attr("x1", "0%")
+        .attr("x2", "100%")
+        .attr("y1", "0%")
+        .attr("y2", "0%");
+
+      gradient.append("stop")
+        .attr("offset", "0%")
+        .attr("stop-color", "red");  // Bad condition
+
+      gradient.append("stop")
+        .attr("offset", "100%")
+        .attr("stop-color", "green");  // Good condition
+
+      // Append color bar
+      chart.append("rect")
+        .attr("x", 0)
+        .attr("y", height + gradientPadding)  // Adjusted position for padding
+        .attr("width", width)
+        .attr("height", gradientBarHeight)
+        .style("fill", "url(#condition-gradient)");
+
+      // Add labels for color bar
+      chart.append("text")
+        .attr("x", 0)
+        .attr("y", height + gradientPadding + gradientBarHeight + 15)
+        .attr("text-anchor", "start")
+        .style("font-size", "12px")
+        .text("Bad Condition");
+
+      chart.append("text")
+        .attr("x", width)
+        .attr("y", height + gradientPadding + gradientBarHeight + 15)
+        .attr("text-anchor", "end")
+        .style("font-size", "12px")
+        .text("Good Condition");
 
       // Chart title
       svg.append("text")
@@ -231,3 +273,4 @@ circle:hover {
   border-radius: 2px;
 }
 </style>
+

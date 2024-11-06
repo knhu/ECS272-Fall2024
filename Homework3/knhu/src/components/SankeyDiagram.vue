@@ -21,7 +21,7 @@ export default {
   data() {
     return {
       margin: { top: 60, right: 100, bottom: 20, left: 80 },
-      width: 1400,
+      width: 1300,
       height: 900,
       topMakes: 10,
       selectedMakes: ["Select option"],
