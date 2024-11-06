@@ -1,7 +1,7 @@
 <template>
   <div>
     <svg ref="svg"></svg>
-    <!-- Tooltip div that will be positioned absolutely -->
+    <!-- Tooltip div positioned absolutely -->
     <div v-if="tooltipVisible" :style="tooltipStyles" class="tooltip">{{ tooltipContent }}</div>
     <label for="car-make-filter">Select up to 5 Car Makes:</label>
     <select id="car-make-filter" v-model="selectedMakes" multiple @change="checkSelectionLimit">
@@ -31,7 +31,6 @@ export default {
       height: 400,
       availableMakes: [],
       selectedMakes: ["show-all"],
-      loadedData: [],
       tooltipVisible: false,
       tooltipContent: "",
       tooltipStyles: {
@@ -48,7 +47,6 @@ export default {
     };
   },
   computed: {
-    // Compute displayed makes for the legend based on selectedMakes
     displayedMakes() {
       return this.selectedMakes.includes("show-all") ? this.availableMakes : this.selectedMakes;
     },
@@ -59,7 +57,7 @@ export default {
   },
   methods: {
     async loadDataAndDrawChart() {
-      const data = await d3.csv("../../data/car_prices.csv");
+      const data = await d3.csv("../../data/top_10_car_prices.csv");
       this.initializeAvailableMakes(data);
       this.loadedData = data;
       this.drawChart();
@@ -92,12 +90,11 @@ export default {
       const width = this.width - this.margin.left - this.margin.right;
       const height = this.height - this.margin.top - this.margin.bottom;
       const gradientBarHeight = 10;
-      const gradientPadding = 20; // Padding between x-axis label and gradient bar
+      const gradientPadding = 20;
 
       const isDefaultView = this.selectedMakes.includes("show-all");
-      const filteredData = isDefaultView 
-        ? this.loadedData
-        : this.loadedData.filter(d => this.selectedMakes.includes(d.make));
+      const filteredData = (isDefaultView ? this.loadedData : this.loadedData.filter(d => this.selectedMakes.includes(d.make)))
+        .filter(d => d.condition !== "" && d.condition != null); // Filter out entries with missing condition ratings
 
       const x = d3.scaleLinear().domain([0, 50]).range([0, width]);
       const y = d3.scaleLinear().domain(d3.extent(filteredData, d => +d.sellingprice)).nice().range([height, 0]);
@@ -110,7 +107,7 @@ export default {
         .append("g")
         .attr("transform", `translate(${this.margin.left}, ${this.margin.top})`);
 
-      // X-axis with transition
+      // X-axis
       const xAxis = chart.append("g")
         .attr("transform", `translate(0, ${height})`)
         .call(d3.axisBottom(x).ticks(10).tickFormat(d => (d === 50 ? "46-49" : `${d}`)));
@@ -118,12 +115,12 @@ export default {
       // X-axis title
       xAxis.append("text")
         .attr("x", width / 2)
-        .attr("y", gradientPadding + gradientBarHeight + 30) // Adjusted for padding
+        .attr("y", gradientPadding + gradientBarHeight + 30)
         .attr("fill", "black")
         .style("font-size", "14px")
         .text("Condition Rating Bins");
 
-      // Y-axis with transition
+      // Y-axis
       const yAxis = chart.append("g")
         .call(d3.axisLeft(y));
 
@@ -136,8 +133,8 @@ export default {
         .style("font-size", "14px")
         .text("Selling Price");
 
-      // Circles with animations for entering, updating, and exiting data
-      const circles = chart.selectAll("circle")
+      // Circles with tooltip and animations
+      chart.selectAll("circle")
         .data(filteredData, d => d.id)
         .join(
           enter => enter.append("circle")
@@ -179,10 +176,10 @@ export default {
           this.tooltipStyles.opacity = 0;
         });
 
-      // Animate the X-axis when data updates
+      // Animate X-axis
       xAxis.transition().duration(1000).call(d3.axisBottom(x).ticks(10));
 
-      // Animate the Y-axis when data updates
+      // Animate Y-axis
       yAxis.transition().duration(1000).call(d3.axisLeft(y));
 
       // Gradient color bar for condition scale
@@ -190,40 +187,23 @@ export default {
         .append("linearGradient")
         .attr("id", "condition-gradient")
         .attr("x1", "0%")
-        .attr("x2", "100%")
-        .attr("y1", "0%")
-        .attr("y2", "0%");
+        .attr("x2", "100%");
 
-      gradient.append("stop")
-        .attr("offset", "0%")
-        .attr("stop-color", "red");  // Bad condition
+      gradient.append("stop").attr("offset", "0%").attr("stop-color", "red");
+      gradient.append("stop").attr("offset", "100%").attr("stop-color", "green");
 
-      gradient.append("stop")
-        .attr("offset", "100%")
-        .attr("stop-color", "green");  // Good condition
-
-      // Append color bar
       chart.append("rect")
         .attr("x", 0)
-        .attr("y", height + gradientPadding)  // Adjusted position for padding
+        .attr("y", height + gradientPadding)
         .attr("width", width)
         .attr("height", gradientBarHeight)
         .style("fill", "url(#condition-gradient)");
 
-      // Add labels for color bar
-      chart.append("text")
-        .attr("x", 0)
-        .attr("y", height + gradientPadding + gradientBarHeight + 15)
-        .attr("text-anchor", "start")
-        .style("font-size", "12px")
-        .text("Bad Condition");
-
-      chart.append("text")
-        .attr("x", width)
-        .attr("y", height + gradientPadding + gradientBarHeight + 15)
-        .attr("text-anchor", "end")
-        .style("font-size", "12px")
-        .text("Good Condition");
+      // Gradient labels
+      chart.append("text").attr("x", 0).attr("y", height + gradientPadding + gradientBarHeight + 15)
+        .attr("text-anchor", "start").style("font-size", "12px").text("Bad Condition");
+      chart.append("text").attr("x", width).attr("y", height + gradientPadding + gradientBarHeight + 15)
+        .attr("text-anchor", "end").style("font-size", "12px").text("Good Condition");
 
       // Chart title
       svg.append("text")
@@ -273,4 +253,3 @@ circle:hover {
   border-radius: 2px;
 }
 </style>
-

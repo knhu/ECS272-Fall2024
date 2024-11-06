@@ -47,7 +47,7 @@ export default {
   },
   methods: {
     async loadDataAndDrawChart() {
-      const data = await d3.csv("../../data/car_prices.csv");
+      const data = await d3.csv("../../data/top_10_car_prices.csv");
       this.initializeAvailableMakes(data);
       this.loadedData = data;
       this.drawChart();
@@ -107,7 +107,7 @@ export default {
         return modelColor;
       };
 
-      // Draw nodes with animation
+      // Draw nodes with staggered animation
       g.append("g")
         .selectAll("rect")
         .data(graph.nodes, d => d.name)
@@ -125,20 +125,21 @@ export default {
             .on("mousemove", event => this.moveTooltip(event))
             .on("mouseout", () => this.hideTooltip())
             .transition()
-            .duration(1000)
+            .duration(800)
+            .delay((d, i) => i * 100) // Staggered delay
             .attr("opacity", 1),
           update => update
             .transition()
-            .duration(1000)
+            .duration(800)
             .attr("y", d => d.y0)
             .attr("height", d => d.y1 - d.y0),
           exit => exit.transition()
-            .duration(1000)
+            .duration(500)
             .attr("opacity", 0)
             .remove()
         );
 
-      // Draw links with animation
+      // Draw links with smoother animation
       g.append("g")
         .selectAll("path")
         .data(graph.links, d => `${d.source.name}-${d.target.name}`)
@@ -147,21 +148,23 @@ export default {
             .attr("d", sankeyLinkHorizontal())
             .attr("fill", "none")
             .attr("stroke", d => colorByType(d.source))
-            .attr("stroke-width", d => Math.max(1, d.width))
+            .attr("stroke-width", 0)
             .attr("stroke-opacity", 0)
             .on("mouseover", (event, d) => this.showTooltip(event, d, false))
             .on("mousemove", event => this.moveTooltip(event))
             .on("mouseout", () => this.hideTooltip())
             .transition()
             .duration(1000)
+            .delay((d, i) => i * 50) // Staggered delay for smoother appearance
+            .attr("stroke-width", d => Math.max(1, d.width))
             .attr("stroke-opacity", 0.3),
           update => update
             .transition()
-            .duration(100)
+            .duration(800)
             .attr("d", sankeyLinkHorizontal())
             .attr("stroke-width", d => Math.max(1, d.width)),
           exit => exit.transition()
-            .duration(1000)
+            .duration(500)
             .attr("stroke-opacity", 0)
             .remove()
         );
@@ -179,14 +182,14 @@ export default {
         .style("font-size", "10px")
         .text(d => d.name);
 
-      // Title and labels with added padding
+      // Title and labels
       svg.append("text")
         .attr("x", this.width / 2)
         .attr("y", this.margin.top / 2)
         .attr("text-anchor", "middle")
         .style("font-size", "16px")
         .text("Car Make-Model-Body Type Relationships");
-
+        
       svg.append("text")
         .attr("x", this.margin.left)
         .attr("y", this.margin.top - 10)
@@ -210,7 +213,6 @@ export default {
     },
     showTooltip(event, d, isNode) {
       if (isNode) {
-        // Node tooltip (Make, Model, or Body Type)
         const dataForNode = this.loadedData.filter(row => row.make === d.name || row.model === d.name || row.body === d.name);
         const numModels = new Set(dataForNode.map(row => row.model)).size;
         const avgPrice = d3.mean(dataForNode, row => +row.sellingprice).toFixed(2);
@@ -221,7 +223,6 @@ export default {
           \nAverage Selling Price: $${avgPrice}
           \nAverage Condition: ${avgCondition}`;
       } else {
-        // Link tooltip (Make to Model or Model to Body Type)
         this.tooltipContent = `${d.source.name} → ${d.target.name}
           \nNumber of Connections: ${d.value}`;
       }

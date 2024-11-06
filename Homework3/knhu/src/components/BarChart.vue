@@ -24,7 +24,7 @@ export default {
       const height = this.height - this.margin.top - this.margin.bottom;
 
       // Tooltip setup - ensure single instance
-      d3.select("body").selectAll(".tooltip").remove(); // Remove any existing tooltip first
+      d3.select("body").selectAll(".tooltip").remove();
 
       const tooltip = d3.select("body").append("div")
         .attr("class", "tooltip")
@@ -36,7 +36,7 @@ export default {
         .style("pointer-events", "none")
         .style("opacity", 0); // Initially hidden
 
-      d3.csv('../../data/car_prices.csv').then(data => {
+      d3.csv('../../data/top_10_car_prices.csv').then(data => {
         const counts = d3.rollups(data, v => v.length, d => d.make)
           .map(([make, count]) => ({ make, count }))
           .sort((a, b) => b.count - a.count)
@@ -81,35 +81,38 @@ export default {
             this.onMakeSelect(this.selectedMake);
             this.drawChart();
           })
-          .on("mouseover", function (event, d) {
-            d3.select(this)
+          .on("mouseover", (event, d) => {
+            // Highlight selected bar and dim others
+            chart.selectAll(".bar")
               .transition()
               .duration(200)
-              .attr("fill", "darkblue");
+              .attr("fill", bar => bar.make === d.make ? "darkblue" : "lightgrey");
 
-            // Show and position tooltip with fade-in effect
+            // Show and position tooltip with additional information
+            const total = d3.sum(counts, c => c.count);
+            const percentage = ((d.count / total) * 100).toFixed(2);
             tooltip
               .style("opacity", 0)
-              .html(`<strong>Make:</strong> ${d.make}<br><strong>Count:</strong> ${d.count}`)
+              .html(`<strong>Make:</strong> ${d.make}<br><strong>Count:</strong> ${d.count}<br><strong>Percentage:</strong> ${percentage}%`)
               .style("left", (event.pageX + 10) + "px")
               .style("top", (event.pageY - 28) + "px")
               .transition()
               .duration(200)
               .style("opacity", 1);
           })
-          .on("mousemove", function (event) {
-            // Update tooltip position to follow the cursor
+          .on("mousemove", event => {
             tooltip
               .style("left", (event.pageX + 10) + "px")
               .style("top", (event.pageY - 28) + "px");
           })
-          .on("mouseout", function (event, d) {
-            d3.select(this)
+          .on("mouseout", () => {
+            // Reset colors
+            chart.selectAll(".bar")
               .transition()
               .duration(200)
-              .attr("fill", d.make === this.selectedMake ? "orange" : "steelblue");
+              .attr("fill", d => d.make === this.selectedMake ? "orange" : "steelblue");
 
-            // Hide tooltip with fade-out effect
+            // Hide tooltip
             tooltip.transition().duration(200).style("opacity", 0);
           });
 
@@ -125,6 +128,7 @@ export default {
           .style("fill", "#333")
           .text(d => d.count);
 
+        // X and Y axis
         chart.append("g")
           .attr("transform", `translate(0, ${height})`)
           .call(d3.axisBottom(x))
@@ -189,7 +193,6 @@ export default {
 .tooltip {
   font-size: 14px;
   line-height: 1.5;
-  visibility: visible;
   opacity: 0;
   transition: opacity 0.2s ease;
 }
