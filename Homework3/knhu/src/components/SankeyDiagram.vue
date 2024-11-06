@@ -38,10 +38,10 @@ export default {
         pointerEvents: "none",
         opacity: 0,
       },
-      // Define a unique color scheme specifically for the Sankey Diagram
-      makeColor: "#800000",   // Deep Maroon for Car Makes
-      modelColor: "#808000",  // Olive Green for Models
-      bodyColor: "#483D8B"    // Dark Slate Blue for Body Types
+      // Custom colors for Sankey Diagram nodes
+      makeColor: "#800000",
+      modelColor: "#808000",
+      bodyColor: "#483D8B",
     };
   },
   mounted() {
@@ -80,136 +80,149 @@ export default {
       const height = this.height - this.margin.top - this.margin.bottom;
 
       const g = svg
-        .attr("width", this.width)
-        .attr("height", this.height)
-        .append("g")
-        .attr("transform", `translate(${this.margin.left}, ${this.margin.top})`);
+          .attr("width", this.width)
+          .attr("height", this.height)
+          .append("g")
+          .attr("transform", `translate(${this.margin.left}, ${this.margin.top})`);
 
       const isDefaultView = this.selectedMakes.includes("Select option");
 
       const filteredData = this.loadedData.filter(d =>
-        isDefaultView || this.selectedMakes.includes(d.make)
+          isDefaultView || this.selectedMakes.includes(d.make)
       );
 
       const sankeyData = this.getSankeyData(filteredData);
 
       const sankeyLayout = sankey()
-        .nodeWidth(30)
-        .nodePadding(15)
-        .extent([[0, 0], [width, height]]);
+          .nodeWidth(30)
+          .nodePadding(15)
+          .extent([[0, 0], [width, height]]);
 
       const graph = sankeyLayout(sankeyData);
 
+      // Calculate minimum height for each node based on font size and label length
+      const fontSize = 10; // Font size in pixels
+      const lineHeight = fontSize * 1.4; // Line height for readability
+      graph.nodes.forEach(node => {
+          const lines = Math.ceil(node.name.length / 10); // Assume ~10 characters per line
+          const requiredHeight = lines * lineHeight;
+          if (node.y1 - node.y0 < requiredHeight) {
+              node.y1 = node.y0 + requiredHeight;
+          }
+      });
+
+      // Recompute the layout with adjusted node heights
+      sankeyLayout(graph);
+
       // Custom color function for nodes based on type
       const colorByType = d => {
-        if (this.availableMakes.includes(d.name)) return this.makeColor;
-        if (d.name.includes("Body")) return this.bodyColor;
-        return this.modelColor;
+          if (this.availableMakes.includes(d.name)) return this.makeColor;
+          if (d.name.includes("Body")) return this.bodyColor;
+          return this.modelColor;
       };
 
-      // Draw nodes with new color scheme and animation
+      // Draw nodes with adjusted height
       g.append("g")
-        .selectAll("rect")
-        .data(graph.nodes, d => d.name)
-        .join(
-          enter => enter.append("rect")
-            .attr("x", d => d.x0)
-            .attr("y", d => d.y0)
-            .attr("width", d => d.x1 - d.x0)
-            .attr("height", d => d.y1 - d.y0)
-            .attr("fill", colorByType)
-            .attr("stroke", "#333")
-            .attr("stroke-width", 1.5)
-            .attr("opacity", 0)
-            .on("mouseover", (event, d) => this.showTooltip(event, d, true))
-            .on("mousemove", event => this.moveTooltip(event))
-            .on("mouseout", () => this.hideTooltip())
-            .transition()
-            .duration(800)
-            .delay((d, i) => i * 100) // Staggered delay for smoother appearance
-            .attr("opacity", 1),
-          update => update
-            .transition()
-            .duration(800)
-            .attr("y", d => d.y0)
-            .attr("height", d => d.y1 - d.y0),
-          exit => exit.transition()
-            .duration(500)
-            .attr("opacity", 0)
-            .remove()
-        );
+          .selectAll("rect")
+          .data(graph.nodes, d => d.name)
+          .join(
+              enter => enter.append("rect")
+                  .attr("x", d => d.x0)
+                  .attr("y", d => d.y0)
+                  .attr("width", d => Math.max(30, d.x1 - d.x0))
+                  .attr("height", d => d.y1 - d.y0)
+                  .attr("fill", colorByType)
+                  .attr("stroke", "#333")
+                  .attr("stroke-width", 1.5)
+                  .attr("opacity", 0)
+                  .on("mouseover", (event, d) => this.showTooltip(event, d, true))
+                  .on("mousemove", event => this.moveTooltip(event))
+                  .on("mouseout", () => this.hideTooltip())
+                  .transition()
+                  .duration(800)
+                  .delay((d, i) => i * 100) // Staggered delay for smoother appearance
+                  .attr("opacity", 1),
+              update => update
+                  .transition()
+                  .duration(800)
+                  .attr("y", d => d.y0)
+                  .attr("height", d => d.y1 - d.y0),
+              exit => exit.transition()
+                  .duration(500)
+                  .attr("opacity", 0)
+                  .remove()
+          );
 
-      // Draw links with new color scheme
+      // Draw links with the color scheme
       g.append("g")
-        .selectAll("path")
-        .data(graph.links, d => `${d.source.name}-${d.target.name}`)
-        .join(
-          enter => enter.append("path")
-            .attr("d", sankeyLinkHorizontal())
-            .attr("fill", "none")
-            .attr("stroke", d => colorByType(d.source))
-            .attr("stroke-width", 0)
-            .attr("stroke-opacity", 0)
-            .on("mouseover", (event, d) => this.showTooltip(event, d, false))
-            .on("mousemove", event => this.moveTooltip(event))
-            .on("mouseout", () => this.hideTooltip())
-            .transition()
-            .duration(1000)
-            .delay((d, i) => i * 50)
-            .attr("stroke-width", d => Math.max(1, d.width))
-            .attr("stroke-opacity", 0.3),
-          update => update
-            .transition()
-            .duration(800)
-            .attr("d", sankeyLinkHorizontal())
-            .attr("stroke-width", d => Math.max(1, d.width)),
-          exit => exit.transition()
-            .duration(500)
-            .attr("stroke-opacity", 0)
-            .remove()
-        );
+          .selectAll("path")
+          .data(graph.links, d => `${d.source.name}-${d.target.name}`)
+          .join(
+              enter => enter.append("path")
+                  .attr("d", sankeyLinkHorizontal())
+                  .attr("fill", "none")
+                  .attr("stroke", d => colorByType(d.source))
+                  .attr("stroke-width", 0)
+                  .attr("stroke-opacity", 0)
+                  .on("mouseover", (event, d) => this.showTooltip(event, d, false))
+                  .on("mousemove", event => this.moveTooltip(event))
+                  .on("mouseout", () => this.hideTooltip())
+                  .transition()
+                  .duration(1000)
+                  .delay((d, i) => i * 50)
+                  .attr("stroke-width", d => Math.max(1, d.width))
+                  .attr("stroke-opacity", 0.3),
+              update => update
+                  .transition()
+                  .duration(800)
+                  .attr("d", sankeyLinkHorizontal())
+                  .attr("stroke-width", d => Math.max(1, d.width)),
+              exit => exit.transition()
+                  .duration(500)
+                  .attr("stroke-opacity", 0)
+                  .remove()
+          );
 
       // Node labels
       g.append("g")
-        .selectAll("text")
-        .data(graph.nodes)
-        .join("text")
-        .attr("x", d => d.x0 < width / 2 ? d.x1 + 6 : d.x0 - 6)
-        .attr("y", d => (d.y0 + d.y1) / 2)
-        .attr("dy", "0.35em")
-        .attr("text-anchor", d => d.x0 < width / 2 ? "start" : "end")
-        .attr("fill", "#000000")
-        .style("font-size", "10px")
-        .text(d => d.name);
+          .selectAll("text")
+          .data(graph.nodes)
+          .join("text")
+          .attr("x", d => isDefaultView ? (d.x0 + d.x1) / 2 : d.x1 + 6) // Center in default view, place to the right otherwise
+          .attr("y", d => (d.y0 + d.y1) / 2)
+          .attr("dy", "0.35em")
+          .attr("text-anchor", isDefaultView ? "middle" : "start") // Adjust text alignment
+          .style("font-size", `${fontSize}px`)
+          .text(d => d.name);
 
       // Title and labels
       svg.append("text")
-        .attr("x", this.width / 2)
-        .attr("y", this.margin.top / 2)
-        .attr("text-anchor", "middle")
-        .style("font-size", "16px")
-        .text("Car Make-Model-Body Type Relationships");
+          .attr("x", this.width / 2)
+          .attr("y", this.margin.top / 2)
+          .attr("text-anchor", "middle")
+          .style("font-size", "16px")
+          .text("Car Make-Model-Body Type Relationships");
 
       svg.append("text")
-        .attr("x", this.margin.left)
-        .attr("y", this.margin.top - 10)
-        .attr("fill", "#000000")
-        .style("font-size", "14px")
-        .text("Make");
+          .attr("x", this.margin.left)
+          .attr("y", this.margin.top - 10)
+          .attr("fill", "#000000")
+          .style("font-size", "14px")
+          .text("Make");
 
       svg.append("text")
-        .attr("x", this.width / 2)
-        .attr("y", this.margin.top - 10)
-        .attr("text-anchor", "middle")
-        .style("font-size", "14px")
-        .text("Model");
+          .attr("x", this.width / 2)
+          .attr("y", this.margin.top - 10)
+          .attr("text-anchor", "middle")
+          .style("font-size", "14px")
+          .text("Model");
 
       svg.append("text")
-        .attr("x", this.width - this.margin.right)
-        .attr("y", this.margin.top - 10)
-        .attr("text-anchor", "end")
-        .style("font-size", "14px")
-        .text("Body Type");
+          .attr("x", this.width - this.margin.right)
+          .attr("y", this.margin.top - 10)
+          .attr("text-anchor", "end")
+          .style("font-size", "14px")
+          .text("Body Type");
     },
     showTooltip(event, d, isNode) {
       if (isNode) {
@@ -255,6 +268,7 @@ export default {
 
       const normalizeBodyType = bodyType => bodyType.toLowerCase().replace(/\s+/g, " ").trim();
 
+      // Filter top car makes
       const makeCounts = d3.rollups(data, v => v.length, d => d.make)
         .sort((a, b) => d3.descending(a[1], b[1]))
         .slice(0, this.topMakes)
@@ -272,7 +286,7 @@ export default {
       Object.keys(modelCounts).forEach(make => {
         topModels[make] = Object.entries(modelCounts[make])
           .sort((a, b) => d3.descending(a[1], b[1]))
-          .slice(0, this.topMakes)
+          .slice(0, this.topMakes) // Limit to top models per make
           .map(d => d[0]);
       });
 
@@ -287,7 +301,7 @@ export default {
       Object.keys(bodyTypeCounts).forEach(model => {
         topBodyTypes[model] = Object.entries(bodyTypeCounts[model])
           .sort((a, b) => d3.descending(a[1], b[1]))
-          .slice(0, this.topMakes)
+          .slice(0, this.topMakes) // Limit to top body types per model
           .map(d => d[0]);
       });
 
@@ -338,6 +352,6 @@ select {
   line-height: 1.5;
   opacity: 0;
   transition: opacity 0.2s ease;
-  white-space: pre-wrap;
+  white-space: pre-wrap; /* Preserve line breaks in tooltip */
 }
 </style>

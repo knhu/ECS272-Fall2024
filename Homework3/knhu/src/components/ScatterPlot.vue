@@ -131,7 +131,7 @@ export default {
         .attr("transform", "rotate(-90)")
         .attr("fill", "black")
         .style("font-size", "14px")
-        .text("Selling Price");
+        .text("Selling Price ($)");
 
       // Circles with tooltip and animations
       chart.selectAll("circle")
