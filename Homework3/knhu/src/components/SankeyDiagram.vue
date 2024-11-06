@@ -8,7 +8,6 @@
         <option v-for="make in availableMakes" :key="make" :value="make">{{ make }}</option>
       </select>
     </div>
-    <!-- Tooltip div that will be positioned absolutely -->
     <div v-if="tooltipVisible" :style="tooltipStyles" class="tooltip">{{ tooltipContent }}</div>
   </div>
 </template>
@@ -39,6 +38,10 @@ export default {
         pointerEvents: "none",
         opacity: 0,
       },
+      // Define a unique color scheme specifically for the Sankey Diagram
+      makeColor: "#800000",   // Deep Maroon for Car Makes
+      modelColor: "#808000",  // Olive Green for Models
+      bodyColor: "#483D8B"    // Dark Slate Blue for Body Types
     };
   },
   mounted() {
@@ -97,17 +100,14 @@ export default {
 
       const graph = sankeyLayout(sankeyData);
 
-      const makeColor = "#66c2a5";
-      const modelColor = "#fc8d62";
-      const bodyColor = "#8da0cb";
-
+      // Custom color function for nodes based on type
       const colorByType = d => {
-        if (this.availableMakes.includes(d.name)) return makeColor;
-        if (d.name.includes("Body")) return bodyColor;
-        return modelColor;
+        if (this.availableMakes.includes(d.name)) return this.makeColor;
+        if (d.name.includes("Body")) return this.bodyColor;
+        return this.modelColor;
       };
 
-      // Draw nodes with staggered animation
+      // Draw nodes with new color scheme and animation
       g.append("g")
         .selectAll("rect")
         .data(graph.nodes, d => d.name)
@@ -126,7 +126,7 @@ export default {
             .on("mouseout", () => this.hideTooltip())
             .transition()
             .duration(800)
-            .delay((d, i) => i * 100) // Staggered delay
+            .delay((d, i) => i * 100) // Staggered delay for smoother appearance
             .attr("opacity", 1),
           update => update
             .transition()
@@ -139,7 +139,7 @@ export default {
             .remove()
         );
 
-      // Draw links with smoother animation
+      // Draw links with new color scheme
       g.append("g")
         .selectAll("path")
         .data(graph.links, d => `${d.source.name}-${d.target.name}`)
@@ -155,7 +155,7 @@ export default {
             .on("mouseout", () => this.hideTooltip())
             .transition()
             .duration(1000)
-            .delay((d, i) => i * 50) // Staggered delay for smoother appearance
+            .delay((d, i) => i * 50)
             .attr("stroke-width", d => Math.max(1, d.width))
             .attr("stroke-opacity", 0.3),
           update => update
@@ -189,7 +189,7 @@ export default {
         .attr("text-anchor", "middle")
         .style("font-size", "16px")
         .text("Car Make-Model-Body Type Relationships");
-        
+
       svg.append("text")
         .attr("x", this.margin.left)
         .attr("y", this.margin.top - 10)
@@ -253,10 +253,8 @@ export default {
         return nodeIndex[name];
       };
 
-      // Normalize body type names to avoid duplicates
       const normalizeBodyType = bodyType => bodyType.toLowerCase().replace(/\s+/g, " ").trim();
 
-      // Filter top car makes
       const makeCounts = d3.rollups(data, v => v.length, d => d.make)
         .sort((a, b) => d3.descending(a[1], b[1]))
         .slice(0, this.topMakes)
@@ -274,7 +272,7 @@ export default {
       Object.keys(modelCounts).forEach(make => {
         topModels[make] = Object.entries(modelCounts[make])
           .sort((a, b) => d3.descending(a[1], b[1]))
-          .slice(0, this.topMakes) // Limit to top models per make
+          .slice(0, this.topMakes)
           .map(d => d[0]);
       });
 
@@ -289,7 +287,7 @@ export default {
       Object.keys(bodyTypeCounts).forEach(model => {
         topBodyTypes[model] = Object.entries(bodyTypeCounts[model])
           .sort((a, b) => d3.descending(a[1], b[1]))
-          .slice(0, this.topMakes) // Limit to top body types per model
+          .slice(0, this.topMakes)
           .map(d => d[0]);
       });
 
@@ -340,6 +338,6 @@ select {
   line-height: 1.5;
   opacity: 0;
   transition: opacity 0.2s ease;
-  white-space: pre-wrap; /* Preserve line breaks in tooltip */
+  white-space: pre-wrap;
 }
 </style>
