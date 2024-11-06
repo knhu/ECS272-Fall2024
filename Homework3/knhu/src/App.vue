@@ -1,10 +1,14 @@
-<!-- src/App.vue -->
-
 <template>
   <div class="dashboard">
-    <BarChart :data="barChartData" />
-    <ScatterPlot :data="scatterPlotData" />
-    <SankeyDiagram :data="sankeyData" />
+    <div class="bar-chart">
+      <BarChart :data="barChartData" />
+    </div>
+    <div class="scatter-plot">
+      <ScatterPlot :data="scatterPlotData" />
+    </div>
+    <div class="sankey-diagram">
+      <SankeyDiagram :data="sankeyData" />
+    </div>
   </div>
 </template>
 
@@ -24,8 +28,8 @@ export default {
     };
   },
   async created() {
-    const rawData = await d3.csv('../../data/car_prices.csv');
-    
+    const rawData = await d3.csv('../../data/top_10_car_prices.csv');
+
     // Transform data for BarChart (Top 10 makes by count)
     const makeCounts = d3.rollup(rawData, v => v.length, d => d.make);
     this.barChartData = Array.from(makeCounts, ([make, count]) => ({ make, count }))
@@ -48,11 +52,56 @@ export default {
 };
 </script>
 
-<style>
+<style scoped>
 .dashboard {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: auto;
   gap: 20px;
-  justify-content: space-around;
+  padding: 20px;
+}
+
+.bar-chart {
+  grid-column: 1 / 2;
+  grid-row: 1 / 2;
+}
+
+.scatter-plot {
+  grid-column: 2 / 3;
+  grid-row: 1 / 2;
+}
+
+.sankey-diagram {
+  grid-column: 1 / 3; /* Span across both columns */
+  grid-row: 2 / 3;
+  margin-top: 20px;
+}
+
+/* Responsive adjustments for smaller screens */
+@media (max-width: 1200px) {
+  .dashboard {
+    grid-template-columns: 1fr;
+  }
+  .bar-chart, .scatter-plot, .sankey-diagram {
+    grid-column: 1 / 2;
+  }
+}
+
+@media (max-width: 768px) {
+  .bar-chart, .scatter-plot {
+    height: 40vh;
+  }
+  .sankey-diagram {
+    height: 60vh;
+  }
+}
+
+@media (max-width: 480px) {
+  .bar-chart, .scatter-plot {
+    height: 35vh;
+  }
+  .sankey-diagram {
+    height: 50vh;
+  }
 }
 </style>
