@@ -116,10 +116,12 @@ export default {
 
       // Custom color function for nodes based on type
       const colorByType = d => {
-          if (this.availableMakes.includes(d.name)) return this.makeColor;
-          if (d.name.includes("Body")) return this.bodyColor;
-          return this.modelColor;
+          // Check if node is a "Make", "Model", or "Body Type" node
+          if (this.availableMakes.includes(d.name)) return this.makeColor; // Make nodes
+          if (this.loadedData.some(row => row.body === d.name)) return this.bodyColor; // Body Type nodes
+          return this.modelColor; // Default to Model nodes
       };
+
 
       // Draw nodes with adjusted height
       g.append("g")
