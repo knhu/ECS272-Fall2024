@@ -5,8 +5,8 @@ export default {
   data() {
     return {
       margin: { top: 40, right: 20, bottom: 100, left: 80 },
-      width: 900,
-      height: 500,
+      width: 800,
+      height: 400,
       selectedMake: null,  // Track selected make for highlighting and filtering
     };
   },

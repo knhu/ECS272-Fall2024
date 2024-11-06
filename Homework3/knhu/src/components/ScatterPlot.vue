@@ -5,13 +5,13 @@
     <div v-if="tooltipVisible" :style="tooltipStyles" class="tooltip">{{ tooltipContent }}</div>
     <label for="car-make-filter">Select up to 5 Car Makes:</label>
     <select id="car-make-filter" v-model="selectedMakes" multiple @change="checkSelectionLimit">
-      <option value="Select option">(Select option)</option>
+      <option value="show-all">(Show All)</option>
       <option v-for="make in availableMakes" :key="make" :value="make">{{ make }}</option>
     </select>
 
     <!-- Legend container -->
     <div class="legend-container">
-      <span v-for="make in availableMakes" :key="make" class="legend-item">
+      <span v-for="make in displayedMakes" :key="make" class="legend-item">
         <span :style="{ backgroundColor: colorScale(make) }" class="legend-color-box"></span>
         {{ make }}
       </span>
@@ -26,11 +26,11 @@ export default {
   props: ["data", "selectedMake"],
   data() {
     return {
-      margin: { top: 40, right: 20, bottom: 80, left: 80 }, // Increased bottom and left margins for axis titles
-      width: 900,
-      height: 500,
+      margin: { top: 40, right: 20, bottom: 80, left: 80 },
+      width: 800,
+      height: 400,
       availableMakes: [],
-      selectedMakes: ["Select option"],
+      selectedMakes: ["show-all"],
       loadedData: [],
       tooltipVisible: false,
       tooltipContent: "",
@@ -44,8 +44,14 @@ export default {
         pointerEvents: "none",
         opacity: 0,
       },
-      colorScale: d3.scaleOrdinal(d3.schemeCategory10)
+      colorScale: d3.scaleOrdinal(d3.schemeCategory10),
     };
+  },
+  computed: {
+    // Compute displayed makes for the legend based on selectedMakes
+    displayedMakes() {
+      return this.selectedMakes.includes("show-all") ? this.availableMakes : this.selectedMakes;
+    },
   },
   mounted() {
     this.loadDataAndDrawChart();
@@ -68,11 +74,11 @@ export default {
         .map(d => d.make);
       
       this.availableMakes = makeCounts;
-      this.selectedMakes = ["Select option"];
+      this.selectedMakes = ["show-all"];
     },
     checkSelectionLimit() {
-      if (this.selectedMakes.includes("Select option")) {
-        this.selectedMakes = ["Select option"];
+      if (this.selectedMakes.includes("show-all")) {
+        this.selectedMakes = ["show-all"];
       } else if (this.selectedMakes.length > 5) {
         this.selectedMakes.pop();
       }
@@ -86,10 +92,10 @@ export default {
       const width = this.width - this.margin.left - this.margin.right;
       const height = this.height - this.margin.top - this.margin.bottom;
 
-      const isDefaultView = this.selectedMakes.includes("Select option");
-      const filteredData = this.loadedData.filter(d =>
-        (isDefaultView || this.selectedMakes.includes(d.make)) && d.condition
-      );
+      const isDefaultView = this.selectedMakes.includes("show-all");
+      const filteredData = isDefaultView 
+        ? this.loadedData
+        : this.loadedData.filter(d => this.selectedMakes.includes(d.make));
 
       const x = d3.scaleLinear().domain([0, 50]).range([0, width]);
       const y = d3.scaleLinear().domain(d3.extent(filteredData, d => +d.sellingprice)).nice().range([height, 0]);
@@ -110,7 +116,7 @@ export default {
       // X-axis title
       xAxis.append("text")
         .attr("x", width / 2)
-        .attr("y", 50) // Position below the axis
+        .attr("y", 50)
         .attr("fill", "black")
         .style("font-size", "14px")
         .text("Condition Rating Bins");
@@ -122,7 +128,7 @@ export default {
       // Y-axis title
       yAxis.append("text")
         .attr("x", -height / 2)
-        .attr("y", -60) // Position to the left of the axis
+        .attr("y", -60)
         .attr("transform", "rotate(-90)")
         .attr("fill", "black")
         .style("font-size", "14px")
@@ -135,7 +141,7 @@ export default {
           enter => enter.append("circle")
             .attr("cx", d => x(+d.condition))
             .attr("cy", d => y(+d.sellingprice))
-            .attr("r", 0) // Start with radius 0 for smooth entrance
+            .attr("r", 0)
             .attr("fill", d => this.colorScale(d.make))
             .attr("opacity", 0.7)
             .call(enter => enter.transition()
@@ -191,8 +197,8 @@ export default {
 
 <style scoped>
 select {
-  margin-bottom: 10px;
-  width: 100%;
+  width: 200px;
+  margin-top: 20px;
 }
 circle {
   transition: opacity 0.2s;
